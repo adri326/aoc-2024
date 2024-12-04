@@ -22,17 +22,21 @@ procedure Day1 is
 
     Right_Counts : Integer_Count.Map;
 begin
+    -- Ingest the values
     Open(F, In_File, File_Name);
     while not End_Of_File(F) loop
         Current_Values := Split_Line.Split(Get_Line(F));
         Left_Values.Append(Current_Values(0));
         Right_Values.Append(Current_Values(1));
     end loop;
+    -- Sort the values
     ISort.Sort(Left_Values);
     ISort.Sort(Right_Values);
 
+    -- Part 1: Sum up the absolute of the difference between the two lists
     for I in 0 .. Natural(Left_Values.Length) - 1 loop
         Sum := Sum + abs (Left_Values(I) - Right_Values(I));
+        -- Preparation for part 2, compute the counts for the right list
         if Integer_Count.Contains(Right_Counts, Right_Values(I)) then
             Integer_Count.Replace(Right_Counts, Right_Values(I), Right_Counts(Right_Values(I)) + 1);
         else
@@ -41,6 +45,7 @@ begin
     end loop;
     Put_Line(Sum'Image);
 
+    -- Part 2: Multiply the items in the left list with the number of occurences in the right list.
     Sum := 0;
     for L of Left_Values loop
         If Integer_Count.Contains(Right_Counts, L) then
