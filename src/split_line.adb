@@ -24,9 +24,9 @@ package body Split_Line is
                 Last => Last
             );
             exit when Last = 0;
-            Result.append(Integer'Value(Line(First .. Last)));
+            Result.Append(Integer'Value(Line(First .. Last)));
 
-            exit when First >= Line'Length;
+            exit when First >= Line'Length or Last >= Line'Length;
         end loop;
 
         return Result;
