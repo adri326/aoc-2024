@@ -52,6 +52,7 @@ const Grid = struct {
 };
 
 const XMAS = "XMAS";
+const MAS = "MMSS";
 const Dir = struct { x: i32, y: i32 };
 const DIRS = [_]Dir{
     .{ .x = 0, .y = 1 },
@@ -64,6 +65,7 @@ const DIRS = [_]Dir{
     .{ .x = -1, .y = -1 },
 };
 
+/// Returns the number of `XMAS` whose `X` originate at `(x, y)`.
 fn count_xmas(grid: *const Grid, x: usize, y: usize) usize {
     if (grid.get(x, y) != XMAS[0]) return 0;
 
@@ -93,6 +95,32 @@ fn count_xmas(grid: *const Grid, x: usize, y: usize) usize {
     return res;
 }
 
+/// Returns true if `(x, y)` is the center of two "MAS" in an "X" shape.
+fn is_x_mas(grid: *const Grid, x: usize, y: usize) bool {
+    if (x == 0 or y == 0 or x == grid.width - 1 or y == grid.height - 1 or grid.get(x, y) != 'A') {
+        return 0;
+    }
+
+    const diagonals = [4]u8{
+        grid.get(x - 1, y - 1),
+        grid.get(x + 1, y - 1),
+        grid.get(x + 1, y + 1),
+        grid.get(x - 1, y + 1),
+    };
+
+    for (0..4) |rot| {
+        var matches = true;
+        for (0..4) |i| {
+            if (diagonals[(i + rot) % 4] != MAS[i]) {
+                matches = false;
+                break;
+            }
+        }
+        if (matches) return true;
+    }
+    return false;
+}
+
 pub fn main() !void {
     var input = try std.fs.cwd().openFile("./input/day4.txt", .{});
 
@@ -101,11 +129,16 @@ pub fn main() !void {
     const grid = try Grid.parse(raw_grid, std.heap.page_allocator);
     defer grid.free();
 
-    var sum: usize = 0;
+    var crossword_sum: usize = 0;
+    var cross_sum: usize = 0;
     for (0..grid.height) |y| {
         for (0..grid.width) |x| {
-            sum += count_xmas(&grid, x, y);
+            crossword_sum += count_xmas(&grid, x, y);
+            if (is_x_mas(&grid, x, y)) {
+                cross_sum += 1;
+            }
         }
     }
-    std.debug.print("{}\n", .{sum});
+    std.debug.print("{}\n", .{crossword_sum});
+    std.debug.print("{}\n", .{cross_sum});
 }
