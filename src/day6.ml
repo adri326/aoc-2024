@@ -1,19 +1,19 @@
+type direction =
+  Top
+  | Right
+  | Bottom
+  | Left
+
 type cell =
   Empty
   | Wall
-  | Traversed
+  | Traversed of direction
 
 type grid = {
   cells: cell array;
   width: int;
   height: int;
 }
-
-type direction =
-  Top
-  | Right
-  | Bottom
-  | Left
 
 type guard = {
   x: int;
@@ -71,10 +71,17 @@ let set_cell (g: grid) (x: int) (y: int) (value: cell): unit =
   else
     g.cells.(y * g.width + x) <- value
 
+let copy_grid (g: grid): grid =
+  {
+    width = g.width;
+    height = g.height;
+    cells = Array.copy g.cells
+  }
+
 let cell_to_string (c: cell): string = match c with
   | Empty -> "."
   | Wall -> "#"
-  | Traversed -> "X"
+  | Traversed _ -> "X"
 
 let _print_grid (g: grid): unit =
   for y = 0 to g.height - 1 do
@@ -101,38 +108,83 @@ let guard_step (g: grid) (guard: guard): guard =
     guard
   else
     let (x, y) = advance guard.dir guard.x guard.y in
-    match get_cell g x y with
-    | Some Wall ->
-        {
-          x = guard.x;
-          y = guard.y;
-          dir = turn_right guard.dir
-        }
-    | _ ->
-      set_cell g guard.x guard.y Traversed;
-      {
-        x = x;
-        y = y;
-        dir = guard.dir
-      }
+    let (x, y, dir) = match get_cell g x y with
+      | Some Wall -> (guard.x, guard.y, turn_right guard.dir)
+      | _ -> (x, y, guard.dir)
+    in
+    (
+      match get_cell g guard.x guard.y with
+      | Some Empty -> set_cell g guard.x guard.y (Traversed guard.dir)
+      | _ -> ()
+    );
+    {
+      x = x;
+      y = y;
+      dir = dir;
+    }
 
 let count_traversed (g: grid): int =
   Array.fold_left (fun sum x ->
-    if x == Traversed then
+    match x with
+    | Traversed _ -> sum + 1
+    | _ -> sum
+  ) 0 g.cells
+
+let is_done grid current =
+  match get_cell grid current.x current.y with
+  | None -> true
+  | Some Empty -> false
+  | Some Wall -> false (* Unreachable *)
+  | Some Traversed dir -> current.dir == dir
+
+let simulate (input_grid: grid) (guard: guard): grid * bool =
+  let current_guard = ref guard in
+  let grid = copy_grid input_grid in
+    while not (is_done grid !current_guard) do
+      current_guard := guard_step grid !current_guard
+    done;
+    (grid, Option.is_some (get_cell grid !current_guard.x !current_guard.y))
+
+let is_loop (g: grid) (x: int) (y: int) (guard: guard): bool =
+  let modified_grid = copy_grid g in
+    set_cell modified_grid x y Wall;
+    snd (simulate modified_grid guard)
+
+let part1 (input_grid: grid) (guard: guard): unit =
+  print_int (count_traversed (fst (simulate input_grid guard)));
+  print_string "\n"
+
+let part2 (input_grid: grid) (guard: guard): unit =
+  let is_traversed (cell: cell): bool =
+    match cell with
+    | Traversed _ -> true
+    | _ -> false
+  in
+
+  let first_pass = fst (simulate input_grid guard) in
+
+  (* Iterate over the cells in first_pass that have been traversed and see if adding a wall results in a loop. *)
+  let loops = Array.mapi (fun i cell ->
+    let x = i mod input_grid.width in
+    let y = i / input_grid.width in
+    if not (x == guard.x && y == guard.y) && is_traversed cell then
+      is_loop input_grid x y guard
+    else
+      false
+  ) first_pass.cells in
+
+  (* Sum up all cells resulting in a loop. *)
+  print_int (Array.fold_left (fun sum x ->
+    if x then
       sum + 1
     else
       sum
-  ) 0 g.cells
-
+  ) 0 loops);
+  print_string "\n"
 
 let day_file = "./input/day6.txt"
-
 let () =
   let input = read_input (open_in day_file) in
   let (input_grid, guard) = parse_input input in
-  let guard = ref guard in
-    while Option.is_some (get_cell input_grid !guard.x !guard.y) do
-      guard := guard_step input_grid !guard
-    done;
-    print_int (count_traversed input_grid);
-    print_string "\n"
+    part1 input_grid guard;
+    part2 input_grid guard
