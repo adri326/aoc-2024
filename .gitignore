@@ -5,3 +5,5 @@ node_modules/
 /target
 .zig-cache/
 zig-out/
+aoc_2024.opam
+_build/
