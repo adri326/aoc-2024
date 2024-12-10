@@ -98,7 +98,7 @@ fn count_xmas(grid: *const Grid, x: usize, y: usize) usize {
 /// Returns true if `(x, y)` is the center of two "MAS" in an "X" shape.
 fn is_x_mas(grid: *const Grid, x: usize, y: usize) bool {
     if (x == 0 or y == 0 or x == grid.width - 1 or y == grid.height - 1 or grid.get(x, y) != 'A') {
-        return 0;
+        return false;
     }
 
     const diagonals = [4]u8{
