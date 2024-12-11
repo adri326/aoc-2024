@@ -32,7 +32,7 @@ $(GO_OUTPUT): $(BUILD_DIR)/%: $(SRC_DIR)/%/main.go | $(BUILD_DIR)/
 $(OCAML_OUTPUT): $(BUILD_DIR)/%: $(SRC_DIR)/%.ml | $(BUILD_DIR)/
 	@if command -v dune >/dev/null; then \
 	echo "Compiling $@"; \
-	dune build $<; \
+	dune build src/$*.exe; \
 	cp _build/default/src/$*.exe $@; chmod +w $@; \
 	else echo "No ocaml toolchain available (dune), skipping $@"; fi
 

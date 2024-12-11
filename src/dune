@@ -7,3 +7,8 @@
  (public_name day7)
  (name day7)
 )
+
+(executable
+ (public_name day11)
+ (name day11)
+)
