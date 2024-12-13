@@ -78,7 +78,6 @@ function Problem:solve_part1()
 
             if y_remaining == self.b.y * b_amount then
                 local cost = a_amount * 3 + b_amount
-                print(a_amount, b_amount)
                 if best_solution == nil or best_solution > cost then
                     best_solution = cost
                 end
@@ -156,54 +155,21 @@ function solve_single_axis(a, b, target)
 end
 
 function Problem:solve_part2()
-    -- Notice that none of the inputs are colinear,
-    -- meaning that the solution is always unique. Moreover,
-    -- `a.x - a.y` is always of a different sign than `b.x - b.y`.
+    local det = self.a.x * self.b.y - self.a.y * self.b.x
+    local a_steps = (self.target.x * self.b.y - self.target.y * self.b.x) // det
+    local b_steps = (self.target.y * self.a.x - self.target.x * self.a.y) // det
 
-    local a_delta = self.a.x - self.a.y
-    local b_delta = self.b.x - self.b.y
-
-    local tail = solve_single_axis(a_delta, b_delta, self.target.x - self.target.y)
-    if tail == nil then
+    if self.a.x * a_steps + self.b.x * b_steps ~= self.target.x then
+        return nil
+    end
+    if self.a.y * a_steps + self.b.y * b_steps ~= self.target.y then
         return nil
     end
 
-    -- If a solution exists, it must be possible to reach `(semitarget, semitarget)`
-    -- and then do `tail` steps.
-    local semitarget = self.target.x - tail[1] * self.a.x - tail[2] * self.b.x
-
-    if semitarget == 0 then
-        return tail[1] * 3 + tail[2]
-    end
-
-    -- print("semitarget", semitarget)
-    -- A "big step" is a set of A presses and B presses that brings us back on the diagonal.
-    local bigstep = solve_single_axis(a_delta, b_delta, 0)
-
-    if bigstep == nil then
-        return nil
-    end
-    local bigstep_length = self.a.x * bigstep[1] + self.b.x * bigstep[2]
-    if bigstep_length == 0 then
-        return nil
-    end
-
-    if semitarget % bigstep_length ~= 0 then
-        return nil
-    end
-    local a_steps = semitarget // bigstep_length * bigstep[1] + tail[1]
-    local b_steps = semitarget // bigstep_length * bigstep[2] + tail[2]
-
-    if a_steps * self.a.x + b_steps * self.b.x ~= self.target.x then
-        return nil
-    end
-    if a_steps * self.a.y + b_steps * self.b.y ~= self.target.y then
-        return nil
-    end
     return a_steps * 3 + b_steps
 end
 
-local problems = parse_problems(read_all("./input/day13-example.txt"))
+local problems = parse_problems(read_all("./input/day13.txt"))
 
 local part1 = 0
 local part2 = 0
@@ -214,8 +180,8 @@ for _, problem in pairs(problems) do
     end
 
     local fixed_problem = Problem:new(problem.a, problem.b, {
-        x = problem.target.x + 0 * 10000000000000,
-        y = problem.target.y + 0 * 10000000000000
+        x = problem.target.x + 10000000000000,
+        y = problem.target.y + 10000000000000
     })
     local fixed_cost = fixed_problem:solve_part2()
     if fixed_cost ~= nil then
