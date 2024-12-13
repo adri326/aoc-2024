@@ -38,7 +38,7 @@ end
 
 height = #lines
 width = #lines[1]
-neighbors = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
+neighbors = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}}
 
 function fence_cost(x, y)
     open = {{x, y}}
@@ -51,7 +51,8 @@ function fence_cost(x, y)
 
         if closed[index] == nil then
             local fences = 0
-            for _, neighbor in pairs(neighbors) do
+            local sides = {}
+            for i, neighbor in pairs(neighbors) do
                 local x2 = current[1] + neighbor[1]
                 local y2 = current[2] + neighbor[2]
 
@@ -65,34 +66,56 @@ function fence_cost(x, y)
                     if closed[(y2 - 1) * width + (x2 - 1)] == nil then
                         open[#open + 1] = {x2, y2}
                     end
+                    sides[i] = true
                 else
+                    sides[i] = false
                     fences = fences + 1
                 end
             end
-            closed[index] = fences
+
+            local corners = 0
+            for i = 1, 4 do
+                j = i % 4 + 1
+                if sides[i] and sides[j] then
+                    local x2 = current[1] + neighbors[i][1] + neighbors[j][1]
+                    local y2 = current[2] + neighbors[i][2] + neighbors[j][2]
+                    if lines[y2][x2] ~= current_char then
+                        corners = corners + 1
+                    end
+                elseif not sides[i] and not sides[j] then
+                    corners = corners + 1
+                end
+            end
+
+            closed[index] = {fences, corners}
         end
     end
 
     local perimeter = 0
     local area = 0
-    for pair, n_fences in pairs(closed) do
-        local x2 = pair % width + 1
-        local y2 = pair // width + 1
+    local sides = 0
+    for index, values in pairs(closed) do
+        local x2 = index % width + 1
+        local y2 = index // width + 1
         filled[y2][x2] = true
         area = area + 1
-        perimeter = perimeter + n_fences
+        perimeter = perimeter + values[1]
+        sides = sides + values[2]
     end
 
-    return area * perimeter
+    return {area * perimeter, area * sides}
 end
 
 part1 = 0
+part2 = 0
 while true do
     found_unfilled = false
     for y = 1, height do
         for x = 1, width do
             if not filled[y][x] then
-                part1 = part1 + fence_cost(x, y)
+                local cost = fence_cost(x, y)
+                part1 = part1 + cost[1]
+                part2 = part2 + cost[2]
                 found_unfilled = true
             end
         end
@@ -103,3 +126,4 @@ while true do
 end
 
 print(part1)
+print(part2)
