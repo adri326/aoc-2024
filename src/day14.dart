@@ -72,13 +72,26 @@ class Robot {
         this.y = (this.y + this.vy) % HEIGHT;
     }
 
+    /// Returns the number of steps needed for this robot to reach `pos`.
     int? steps_until_at(Position pos) {
+        // The number of steps needed for the robot to reach `(pos.x, _)`.
+        // We will then have `this.x + this.vx * x_steps == pos.x`:
         int x_steps = (rem(pos.x - this.x, WIDTH) * inv(this.vx, WIDTH)) % WIDTH;
+
+        // The total number of steps will be `x_steps + y_steps * WIDTH`,
+        // since doing `WIDTH` steps will not move the robot horizontally.
+        // This means that we need to figure out by how much the robot moves
+        // vertically after `WIDTH` steps:
         int vy = (this.vy * WIDTH) % HEIGHT;
+        // ...and where it begins vertically after `x_steps`:
         int py = (this.y + this.vy * x_steps) % HEIGHT;
+        // The number of steps needed for `py + vy * y_steps == pos.y` to be true:
         int y_steps = (rem(pos.y - py, HEIGHT) * inv(vy, HEIGHT)) % HEIGHT;
+
         var steps = x_steps + y_steps * WIDTH;
 
+        // If we're unlucky and get a robot that has a period of `WIDTH` or `HEIGHT`,
+        // then this little test will catch it:
         var final_position = this.step(steps);
         if (final_position.x != pos.x || final_position.y != pos.y) {
             return null;
@@ -86,6 +99,8 @@ class Robot {
         return steps;
     }
 
+    /// Computes the number of steps until `friend` is next to this robot.
+    /// In other words: `friend.step(result) - this.step(result) = neighbor_pos`
     int? steps_until_adjacent(Robot friend, Position neighbor_pos) {
         var witness = Robot(
             rem(friend.x - this.x, WIDTH),
@@ -94,11 +109,11 @@ class Robot {
             rem(friend.vy - this.vy, HEIGHT)
         );
 
+        // The problem is equivalent to looking at an imaginary robot moving by their difference
+        // in velocity, and seeing when it reached `neighbor_pos`.
         return witness.steps_until_at(Position(rem(neighbor_pos.x, WIDTH), rem(neighbor_pos.y, HEIGHT)));
     }
 }
-
-
 
 void main() async {
     var input = await File("./input/day14.txt").readAsString();
@@ -124,11 +139,31 @@ void main() async {
         quadrants[quadrant] += 1;
     }
 
+    // Part 1, runs in `O(n^2)` assuming that the number of robots is
+    // proportional to `width * height = n^2`:
     print(quadrants.fold<int>(1, (prod, x) => (prod * x)));
 
     var best_score = 0;
     var best_step = 0;
 
+    // Part 2 is unlike most solutions that you might find.
+    // Instead of simulating the movement of each 500 robots over
+    // 10000 steps, I instead compute the time it takes for random
+    // pairs of robots to be next to one another.
+    // With the assumption that the number of robots is proportional
+    // to `width * height`, this brute-force method runs in `O(n^4)`.
+    //
+    // Since it's more likely that all robots are next to one another
+    // on the easter egg frame, I can compute the distribution of
+    // frames at which robots are adjacent to one another and find the
+    // one where they meet up the most often.
+    //
+    // This lets me run in `O(n^2 * log(n) * s(ε))`, which could be sped up to
+    // `O(n^2 * s(ε))` if I memoized the finite field inversion function.
+    // The function `s(ε)` corresponds to the `steps` variable below, and is a
+    // bit tricky to compute formally, but I doubt it will be anything above `log^2(n)/ε`.
+    // I found that the value below performed well enough
+    // and experimentally yielded `ε < 3%` (p=0.95).
     List<int> counts = List.generate(WIDTH * HEIGHT, (_) => 0);
 
     var steps = 10 * WIDTH * HEIGHT ~/ robots.length;
