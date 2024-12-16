@@ -1,3 +1,15 @@
+read_maze(Maze) :-
+    open("./input/day16.txt", read, Stream),
+    parse_maze(Stream, Maze),
+    close(Stream),
+    !.
+
+read_example_maze(Maze) :-
+    open("./input/day16-example.txt", read, Stream),
+    parse_maze(Stream, Maze),
+    close(Stream),
+    !.
+
 parse_line(10, _, []) :- !.
 parse_line(-1, _, []) :- !.
 parse_line(end_of_file, _, []) :- !.
@@ -23,12 +35,6 @@ parse_maze(Stream, [Line | Rest]) :- \+ at_end_of_stream(Stream),
     get_code(Stream, FirstChar),
     parse_line(FirstChar, Stream, Line),
     parse_maze(Stream, Rest).
-
-read_maze(Maze) :-
-    open("./input/day16-example.txt", read, Stream),
-    parse_maze(Stream, Maze),
-    close(Stream),
-    !.
 
 print_maze([]) :- !.
 print_maze([Line | Rest]) :-
@@ -63,6 +69,11 @@ grid_get(X, Y, Grid, Out) :-
     nth0(Y, Grid, Line),
     nth0(X, Line, Out).
 
+grid3_get(X, Y, Z, Grid, Out) :-
+    nth0(Y, Grid, Line),
+    nth0(X, Line, Vec),
+    nth0(Z, Vec, Out).
+
 replace_nth0(Index, List, Value, Out) :-
     nth0(Index, List, _, Transfer),
     nth0(Index, Out, Value, Transfer).
@@ -70,6 +81,13 @@ replace_nth0(Index, List, Value, Out) :-
 grid_set(X, Y, Grid, Value, Out) :-
     nth0(Y, Grid, Line),
     replace_nth0(X, Line, Value, NewLine),
+    replace_nth0(Y, Grid, NewLine, Out).
+
+grid3_set(X, Y, Z, Grid, Value, Out) :-
+    nth0(Y, Grid, Line),
+    nth0(X, Line, Vec),
+    replace_nth0(Z, Vec, Value, NewVec),
+    replace_nth0(X, Line, NewVec, NewLine),
     replace_nth0(Y, Grid, NewLine, Out).
 
 starting_pos(X, Y, Maze) :-
@@ -96,56 +114,45 @@ get_dir(Dir, XIn, YIn, XOut, YOut) :-
 solve_part1(Maze, Cost) :-
     starting_pos(XPos, YPos, Maze),
     ending_pos(XEnd, YEnd, Maze),
-    fill_zeroes(Maze, Closed),
+    fill_grid_with(Maze, Closed, [0, 0, 0, 0]),
     solve([[XPos, YPos, 0, 0]], Maze, XEnd, YEnd, Closed, Cost).
 
-fill_zeroes([], []).
-fill_zeroes([Line | Rest], [Zeroes | ZeroRest]) :-
-    fill_zeroes2(Line, Zeroes),
-    fill_zeroes(Rest, ZeroRest).
-fill_zeroes2([], []).
-fill_zeroes2([_ | Rest], [0 | Zeroes]) :- fill_zeroes2(Rest, Zeroes).
+fill_grid_with([], [], _).
+fill_grid_with([Line | Rest], [Zeroes | ZeroRest], Value) :-
+    fill_line_with(Line, Zeroes, Value),
+    fill_grid_with(Rest, ZeroRest, Value).
+fill_line_with([], [], _).
+fill_line_with([_ | Rest], [Value | Zeroes], Value) :- fill_line_with(Rest, Zeroes, Value).
 
 % Go forward:
 can_move([XPos, YPos, Dir, Cost], Maze, Closed, [X2, Y2, Dir, NewCost]) :-
     get_dir(Dir, XPos, YPos, X2, Y2),
-    grid_get(X2, Y2, Closed, 0),
+    grid3_get(X2, Y2, Dir, Closed, 0),
     (grid_get(X2, Y2, Maze, 0) ; grid_get(X2, Y2, Maze, 3)),
     NewCost is Cost + 1.
 
 % Turn right:
-can_move([XPos, YPos, Dir, Cost], Maze, Closed, [X2, Y2, NewDir, NewCost]) :-
+can_move([XPos, YPos, Dir, Cost], Maze, Closed, [XPos, YPos, NewDir, NewCost]) :-
     NewDir is (Dir + 1) mod 4,
     get_dir(NewDir, XPos, YPos, X2, Y2),
-    grid_get(X2, Y2, Closed, 0),
+    grid3_get(X2, Y2, NewDir, Closed, 0),
     (grid_get(X2, Y2, Maze, 0) ; grid_get(X2, Y2, Maze, 3)),
-    NewCost is Cost + 1001.
+    NewCost is Cost + 1000.
 
 % Turn left:
-can_move([XPos, YPos, Dir, Cost], Maze, Closed, [X2, Y2, NewDir, NewCost]) :-
+can_move([XPos, YPos, Dir, Cost], Maze, Closed, [XPos, YPos, NewDir, NewCost]) :-
     NewDir is (Dir + 3) mod 4,
     get_dir(NewDir, XPos, YPos, X2, Y2),
-    grid_get(X2, Y2, Closed, 0),
+    grid3_get(X2, Y2, NewDir, Closed, 0),
     (grid_get(X2, Y2, Maze, 0) ; grid_get(X2, Y2, Maze, 3)),
-    NewCost is Cost + 1001.
-
-% find_smallest_cost([Out], Out) :- !.
-% find_smallest_cost([Current | Rest], Out) :-
-%     find_smallest_cost(Rest, Candidate),
-%     nth0(3, Candidate, CandidateCost),
-%     nth0(3, Current, CurrentCost),
-%     (
-%         (CandidateCost < CurrentCost, Out = Candidate, !)
-%         ; Out = Current
-%     ),
-%     !.
+    NewCost is Cost + 1000.
 
 filter_closed(_, [], []) :- !.
-filter_closed([X, Y, D], [[X, Y, D, _] | Rest], Rest) :- !.
+filter_closed([X, Y, D], [[X, Y, D | _] | Rest], Rest) :- !.
 filter_closed(Cond, [Current | Rest], [Current | FilteredRest]) :- filter_closed(Cond, Rest, FilteredRest).
 
 insert_sorted(Elem, [], [Elem]) :- !.
-insert_sorted([X, Y, D, Cost], [Current | Rest], [[X, Y, D, Cost], Current | Rest]) :-
+insert_sorted([X, Y, D, Cost | ElemRest], [Current | Rest], [[X, Y, D, Cost | ElemRest], Current | Rest]) :-
     nth0(3, Current, Cost2),
     Cost < Cost2,
     !.
@@ -158,12 +165,12 @@ merge_sorted([Elem | Rest], List, ListOut) :-
 
 solve([[XEnd, YEnd, _, Cost] | _], _Maze, XEnd, YEnd, _Closed, Cost) :- !.
 solve([Current | Opens], Maze, XEnd, YEnd, Closed, Cost) :-
-    Current = [XPos, YPos, Dir, _Cost],
+    Current = [XPos, YPos, Dir | _],
     % Find the next moves:
     findall(T, can_move(Current, Maze, Closed, T), Moves),
 
-    % Add (XPos, YPos) to Closed and remove the other entries in Opens:
-    grid_set(XPos, YPos, Closed, 1, NewClosed),
+    % Add (XPos, YPos, Dir) to Closed and remove the other entries in Opens:
+    grid3_set(XPos, YPos, Dir, Closed, 1, NewClosed),
     filter_closed([XPos, YPos, Dir], Opens, OpensFiltered),
 
     merge_sorted(Moves, OpensFiltered, NextMoves),
