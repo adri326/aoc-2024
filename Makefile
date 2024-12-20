@@ -17,6 +17,10 @@ ADA_DAYS = $(wildcard src/day*.adb)
 ADA_OUTPUT = $(ADA_DAYS:src/%.adb=$(BUILD_DIR)/%)
 ALL_OUTPUT += $(ADA_OUTPUT)
 
+HASKELL_DAYS = $(wildcard src/day*.hs)
+HASKELL_OUTPUT = $(HASKELL_DAYS:src/%.hs=$(BUILD_DIR)/%)
+ALL_OUTPUT += $(HASKELL_OUTPUT)
+
 all: $(ALL_OUTPUT)
 .PHONY: all
 
@@ -47,3 +51,10 @@ $(ADA_OUTPUT): $(BUILD_DIR)/%: $(SRC_DIR)/%.adb | $(BUILD_DIR)/
 	echo "Compiling $@"; \
 	gprbuild $*; \
 	else echo "No ada toolchain available (gprbuild), skipping $@"; fi
+
+$(HASKELL_OUTPUT): $(BUILD_DIR)/%: $(SRC_DIR)/%.hs | $(BUILD_DIR)/
+	@if command -v ghc >/dev/null; then \
+	echo "Compiling $@"; \
+	mkdir -p "$(BUILD_DIR)/objects-$*/"; \
+	ghc -o $@ -odir "$(BUILD_DIR)/objects-$*/" -hidir "$(BUILD_DIR)/objects-$*/" $<; \
+	else echo "No haskell toolchain available (ghc), skipping $@"; fi
