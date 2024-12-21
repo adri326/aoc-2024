@@ -24,7 +24,7 @@ parseMaze raw =
     Just Maze {
         grid = grid,
         start = (start_x, start_y),
-        width = length (grid !! 0),
+        width = length (head grid),
         height = length grid,
         end = (end_x, end_y)
     }
@@ -60,8 +60,7 @@ makeDistMap maze d ((x, y) : rest) =
     ) dist
 
 imap :: (Int -> a -> b) -> [a] -> [b]
-imap cb list =
-    snd $ foldl (\(n, r) x -> (n + 1, r ++ [cb n x])) (0, []) list
+imap cb = zipWith cb [0..]
 
 neighbors2 :: Maze -> Int -> (Int, Int) -> [(Int, Int)]
 neighbors2 maze dist pos =
