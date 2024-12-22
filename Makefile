@@ -56,5 +56,5 @@ $(HASKELL_OUTPUT): $(BUILD_DIR)/%: $(SRC_DIR)/%.hs | $(BUILD_DIR)/
 	@if command -v ghc >/dev/null; then \
 	echo "Compiling $@"; \
 	mkdir -p "$(BUILD_DIR)/objects-$*/"; \
-	ghc -o $@ -odir "$(BUILD_DIR)/objects-$*/" -hidir "$(BUILD_DIR)/objects-$*/" $<; \
-	else echo "No haskell toolchain available (ghc), skipping $@"; fi
+	cabal install --installdir="$(BUILD_DIR)" $*; \
+	else echo "No haskell toolchain available (cabal), skipping $@"; fi

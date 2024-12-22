@@ -7,3 +7,4 @@ node_modules/
 zig-out/
 aoc_2024.opam
 _build/
+dist-newstyle

@@ -2,6 +2,8 @@ import Data.List
 import Data.Maybe
 import Debug.Trace (trace)
 import System.IO
+import Data.Function (fix)
+import Data.Function.Memoize (memoFix)
 
 
 mainKeypad = [
@@ -61,17 +63,33 @@ countMoves keypad depth fromChar toChar =
   length moves + sum rec_lengths
   where
     moves = getMoves keypad fromChar toChar
-    rec_lengths = zipWith (countMoves controlKeypad (depth - 1)) ('A' : moves) (moves ++ "A")
+    rec_lengths = zipWith (countControlMoves (depth - 1)) ('A' : moves) (moves ++ "A")
+
+countControlMoves :: Int -> Char -> Char -> Int
+countControlMoves _depth _fromChar _toChar = memoFix (\self args ->
+    let (depth, fromChar, toChar) = args in
+    let moves = getMoves controlKeypad fromChar toChar in
+    let rec_lengths = zipWith (curry3 self (depth - 1)) ('A' : moves) (moves ++ "A") in
+    if depth == 0 then
+      0
+    else
+      length moves + sum rec_lengths
+  ) (_depth, _fromChar, _toChar)
+
+curry3 :: ((a, b, c) -> d) -> a -> b -> c -> d
+curry3 cb x y z = cb (x, y, z)
 
 solve depth code =
   (length code + sum lengths) * codeValue
   where
-    codeValue :: Int = read $ take (length code - 1) code
+    codeValue = (read $ take (length code - 1) code) :: Int
     lengths = zipWith (countMoves mainKeypad depth) ('A' : code) code
 
 main = do
   handle <- openFile "./input/day21.txt" ReadMode
   contents <- hGetContents handle
+  putStr "Part 1: "
   print $ sum $ map (solve 3) $ lines contents
-  -- print $ sum $ map (solve 26) $ lines contents
+  putStr "Part 2: "
+  print $ sum $ map (solve 26) $ lines contents
   hClose handle
