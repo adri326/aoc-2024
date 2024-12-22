@@ -1,4 +1,3 @@
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 
 import System.IO
@@ -35,7 +34,7 @@ parseMaze raw =
 mazeGet :: Maze -> (Int, Int) -> Bool
 mazeGet maze (x, y) = (x >= 0 && y >= 0 && x < width maze && y < height maze) && (grid maze !! y !! x)
 
-add2 :: forall a. Integral a => (a, a) -> (a, a) -> (a, a)
+add2 :: (Num a, Num b) => (a, b) -> (a, b) -> (a, b)
 add2 (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
 
 neighbors :: Maze -> (Int, Int) -> [(Int, Int)]
